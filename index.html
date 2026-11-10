@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>미니 게임 모음</title>
+<style>
+  :root { --bg:#0f1226; --card:#1b2044; --text:#eef0ff; --muted:#9aa3d6; --accent:#ffcc4d; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:radial-gradient(circle at 50% 0%, #26306b, var(--bg) 70%); color:var(--text);
+         font-family:"Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif; padding:32px 16px; }
+  h1 { text-align:center; font-size:2.2rem; margin:0 0 8px; }
+  p.sub { text-align:center; color:var(--muted); margin:0 0 32px; }
+  .grid { max-width:880px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:18px; }
+  a.card { display:block; background:var(--card); border-radius:18px; padding:24px 20px; text-decoration:none; color:var(--text);
+           border:2px solid transparent; transition:transform .15s, border-color .15s; }
+  a.card:hover, a.card:focus-visible { transform:translateY(-4px); border-color:var(--accent); outline:none; }
+  .icon { font-size:3rem; }
+  .card h2 { margin:10px 0 6px; font-size:1.3rem; }
+  .card p { margin:0; color:var(--muted); font-size:.92rem; line-height:1.5; }
+  .tag { display:inline-block; margin-top:12px; font-size:.75rem; padding:3px 10px; border-radius:99px; background:#2c336a; color:var(--accent); }
+</style>
+</head>
+<body>
+  <h1>🎮 미니 게임 모음</h1>
+  <p class="sub">하고 싶은 게임을 골라보세요</p>
+  <div class="grid">
+    <a class="card" href="sky-shooter.html">
+      <div class="icon">✈️</div><h2>하늘 슈터</h2>
+      <p>비행기를 몰고 적 편대와 보스를 격추하세요!</p><span class="tag">슈팅</span>
+    </a>
+    <a class="card" href="brick-breaker.html">
+      <div class="icon">🧱</div><h2>벽돌 깨기</h2>
+      <p>패들로 공을 튕겨 모든 벽돌을 부수세요.</p><span class="tag">아케이드</span>
+    </a>
+    <a class="card" href="memory-cards.html">
+      <div class="icon">🃏</div><h2>카드 짝 맞추기</h2>
+      <p>카드를 뒤집어 같은 그림 짝을 찾으세요.</p><span class="tag">퍼즐</span>
+    </a>
+    <a class="card" href="jump-runner.html">
+      <div class="icon">🏃</div><h2>점프 러너</h2>
+      <p>장애물을 뛰어넘고 최대한 멀리 달리세요.</p><span class="tag">러너</span>
+    </a>
+  </div>
+</body>
+</html>

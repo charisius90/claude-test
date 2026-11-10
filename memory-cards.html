@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>카드 짝 맞추기</title>
+<style>
+  :root { --bg:#14231c; --felt:#1d3a2c; --text:#f3fff7; --muted:#a6c9b5; --back:#3c6df0; --back2:#2a4fc0; --face:#fffdf5; --accent:#ffd84d; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:radial-gradient(circle at 50% 30%, var(--felt), var(--bg) 75%); color:var(--text);
+         font-family:"Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif; padding:56px 16px 24px; display:flex; flex-direction:column; align-items:center; }
+  a.back { position:fixed; top:10px; left:10px; color:#a6c9b5; font-size:14px; text-decoration:none; background:#0006; padding:6px 10px; border-radius:8px; }
+  h1 { margin:0 0 12px; font-size:1.9rem; }
+  .controls { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; justify-content:center; }
+  button { font:inherit; font-size:.95rem; padding:8px 16px; border-radius:10px; border:0; cursor:pointer; background:#2d5a44; color:var(--text); }
+  button.on { background:var(--accent); color:#222; font-weight:bold; }
+  .stats { display:flex; gap:22px; margin-bottom:16px; color:var(--muted); font-size:1rem; }
+  .stats b { color:var(--text); }
+  .board { display:grid; gap:10px; width:min(92vw, 560px); }
+  .card { aspect-ratio:3/4; perspective:600px; cursor:pointer; border:0; padding:0; background:none; }
+  .inner { position:relative; width:100%; height:100%; transition:transform .4s; transform-style:preserve-3d; }
+  .card.flip .inner, .card.done .inner { transform:rotateY(180deg); }
+  .side { position:absolute; inset:0; border-radius:10px; backface-visibility:hidden; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 8px #0006; }
+  .front-back { background:repeating-linear-gradient(45deg, var(--back), var(--back) 6px, var(--back2) 6px, var(--back2) 12px); border:3px solid #fff; }
+  .front-back::after { content:"?"; font-size:1.6em; font-weight:bold; color:#fff9; }
+  .face { background:var(--face); transform:rotateY(180deg); font-size:clamp(1.4rem, 7vw, 2.6rem); }
+  .board.hard .face { font-size:clamp(1.1rem, 5vw, 1.9rem); }
+  .card.done .face { background:#d9ffe6; animation:pop .4s; }
+  .card.wrong .face { background:#ffe0e0; }
+  @keyframes pop { 50% { transform:rotateY(180deg) scale(1.1); } }
+  .card:focus-visible { outline:3px solid var(--accent); border-radius:10px; }
+  .result { position:fixed; inset:0; background:#000a; display:none; align-items:center; justify-content:center; padding:16px; }
+  .result.show { display:flex; }
+  .box { background:#1d3a2c; border-radius:18px; padding:28px 32px; text-align:center; max-width:340px; width:100%; border:2px solid var(--accent); }
+  .box h2 { margin:0 0 12px; font-size:1.7rem; }
+  .box p { margin:6px 0; color:var(--muted); }
+  .box button { margin-top:16px; background:var(--accent); color:#222; font-weight:bold; }
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← 메뉴로</a>
+<h1>🃏 카드 짝 맞추기</h1>
+<div class="controls">
+  <button id="easy" class="on">쉬움 4×4</button>
+  <button id="hard">어려움 6×6</button>
+  <button id="restart">다시 섞기</button>
+</div>
+<div class="stats">
+  <span>시도 <b id="tries">0</b></span>
+  <span>시간 <b id="time">0:00</b></span>
+  <span>최고 <b id="best">-</b></span>
+</div>
+<div class="board" id="board"></div>
+<div class="result" id="result">
+  <div class="box">
+    <h2>🎉 완성!</h2>
+    <p id="rText"></p>
+    <p id="rBest"></p>
+    <button id="again">다시 하기</button>
+  </div>
+</div>
+<script>
+const EMOJI = ['🍎','🍌','🍇','🍓','🍒','🍑','🥝','🍍','🥕','🌽','🍄','🌵','🐶','🐱','🐸','🐼','🦊','🐧','🦁','🐙','🚀','⚽','🎸','🌈'];
+const board = document.getElementById('board');
+const $ = id => document.getElementById(id);
+let size = 4, first = null, lock = false, tries = 0, matched = 0, startTime = 0, timer = null;
+
+function bestKey() { return 'memoryBest' + size; }
+function loadBest() { try { return JSON.parse(localStorage.getItem(bestKey())); } catch (e) { return null; } }
+function saveBest(v) { try { localStorage.setItem(bestKey(), JSON.stringify(v)); } catch (e) {} }
+function fmt(sec) { return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }
+function showBest() { const b = loadBest(); $('best').textContent = b ? `${b.tries}회 · ${fmt(b.time)}` : '-'; }
+
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+function newGame() {
+  clearInterval(timer); timer = null;
+  first = null; lock = false; tries = 0; matched = 0; startTime = 0;
+  $('tries').textContent = 0; $('time').textContent = '0:00'; showBest();
+  $('result').classList.remove('show');
+  const pairs = size * size / 2;
+  const picks = shuffle([...EMOJI]).slice(0, pairs);
+  const deck = shuffle([...picks, ...picks]);
+  board.innerHTML = '';
+  board.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+  board.classList.toggle('hard', size === 6);
+  board.style.width = size === 6 ? 'min(94vw, 600px)' : 'min(92vw, 460px)';
+  deck.forEach(em => {
+    const c = document.createElement('button');
+    c.className = 'card'; c.dataset.em = em; c.setAttribute('aria-label', '뒤집힌 카드');
+    c.innerHTML = `<div class="inner"><div class="side front-back"></div><div class="side face">${em}</div></div>`;
+    c.addEventListener('click', () => flip(c));
+    board.appendChild(c);
+  });
+}
+
+function flip(c) {
+  if (lock || c === first || c.classList.contains('done')) return;
+  if (!timer) { startTime = Date.now(); timer = setInterval(() => { $('time').textContent = fmt(elapsed()); }, 250); }
+  c.classList.add('flip'); c.setAttribute('aria-label', c.dataset.em);
+  if (!first) { first = c; return; }
+  tries++; $('tries').textContent = tries;
+  const a = first, b = c; first = null;
+  if (a.dataset.em === b.dataset.em) {
+    a.classList.add('done'); b.classList.add('done'); matched += 2;
+    if (matched === size * size) setTimeout(finish, 500);
+  } else {
+    lock = true;
+    setTimeout(() => { a.classList.add('wrong'); b.classList.add('wrong'); }, 350);
+    setTimeout(() => {
+      for (const x of [a, b]) { x.classList.remove('flip', 'wrong'); x.setAttribute('aria-label', '뒤집힌 카드'); }
+      lock = false;
+    }, 900);
+  }
+}
+function elapsed() { return startTime ? Math.floor((Date.now() - startTime) / 1000) : 0; }
+
+function finish() {
+  clearInterval(timer); timer = null;
+  const t = elapsed();
+  const b = loadBest();
+  const isBest = !b || tries < b.tries || (tries === b.tries && t < b.time);
+  if (isBest) saveBest({ tries, time: t });
+  $('rText').textContent = `시도 ${tries}회 · 시간 ${fmt(t)}`;
+  $('rBest').textContent = isBest ? '🏆 새 최고 기록!' : `최고 기록: ${b.tries}회 · ${fmt(b.time)}`;
+  showBest();
+  $('result').classList.add('show');
+}
+
+function setSize(n) { size = n; $('easy').classList.toggle('on', n === 4); $('hard').classList.toggle('on', n === 6); newGame(); }
+$('easy').onclick = () => setSize(4);
+$('hard').onclick = () => setSize(6);
+$('restart').onclick = newGame;
+$('again').onclick = newGame;
+newGame();
+</script>
+</body>
+</html>
